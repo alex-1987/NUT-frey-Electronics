@@ -15,8 +15,8 @@ sudo apt update && sudo apt install nut
 Verify your UPS is connected and detected:
 
 ```bash
-lsusb | grep "0001:0000"
-
+lsusb
+Bus 003 Device 003: ID 0001:0000 Fry's Electronics
 ```
 
 ---
