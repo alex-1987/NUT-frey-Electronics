@@ -97,25 +97,71 @@ upsc zircon
 
 ## 5. Discord Notifications (Optional)
 
-If you want to receive alerts via Discord when the power status changes, you can use the following script.
+To receive real-time alerts on Discord, you need two things: the notification script and the configuration to trigger it.
 
-**Create `/etc/nut/upsalert.sh`:**
+### Step A: Create the script
+
+Create a file at `/etc/nut/upsalert.sh`:
 
 ```bash
 #!/bin/bash
-WEBHOOK_URL="YOUR_WEBHOOK_HERE"
+WEBHOOK_URL="YOUR_DISCORD_WEBHOOK_URL"
+
 case "$1" in
-    ONLINE)   MSG="✅ Power Restored!" ;;
-    ONBATT)   MSG="⚠️ Power Outage! Running on Battery." ;;
-    LOWBATT)  MSG="🚨 Battery Critical!" ;;
+    ONLINE)   MSG="✅ Power Restored! Server running on AC." ;;
+    ONBATT)   MSG="⚠️ Power Outage! UPS taking over." ;;
+    LOWBATT)  MSG="🚨 Battery critically low!" ;;
+    SHUTDOWN) MSG="🛑 System shutdown initiated." ;;
     *)        MSG="UPS Event: $1" ;;
 esac
-curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$MSG\"}" $WEBHOOK_URL
+
+curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"**[NUT-Alarm]** $MSG\"}" $WEBHOOK_URL
 
 ```
 
-*Remember to `chmod +x /etc/nut/upsalert.sh`.*
+**Important:** Make the script executable:
+
+```bash
+chmod +x /etc/nut/upsalert.sh
+
+```
+
+### Step B: Edit `/etc/nut/upsmon.conf`
+
+You must tell `upsmon` to use the script as a `NOTIFYCMD` and define which events should trigger it using `EXEC`.
+
+Add or modify these lines in `/etc/nut/upsmon.conf`:
+
+```ini
+# Path to your script
+NOTIFYCMD /etc/nut/upsalert.sh
+
+# Monitor line (ensure 'admin' and 'PASSWORD' match your upsd.users)
+MONITOR zircon@localhost 1 admin PASSWORD primary
+
+# Define which events trigger the script (EXEC)
+NOTIFYFLAG ONLINE   SYSLOG+WALL+EXEC
+NOTIFYFLAG ONBATT   SYSLOG+WALL+EXEC
+NOTIFYFLAG LOWBATT  SYSLOG+WALL+EXEC
+NOTIFYFLAG SHUTDOWN SYSLOG+WALL+EXEC
+
+```
 
 ---
 
-**Would you like me to add a section on how to troubleshoot common "Data Stale" errors for this specific chipset?**
+## 6. Final Step: Refreshing the system
+
+After editing `upsmon.conf`, restart the client to start monitoring:
+
+```bash
+sudo systemctl restart nut-client
+
+```
+
+To verify your configuration and see your UPS data, run:
+
+```bash
+upsc zircon
+
+```
+
