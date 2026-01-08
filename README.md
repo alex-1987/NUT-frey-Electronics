@@ -79,7 +79,6 @@ sudo systemctl restart nut-server nut-client
 ```
 
 
-
 ---
 
 ## 4. Verifying the Connection
@@ -99,7 +98,29 @@ upsc zircon
 
 To receive real-time alerts on Discord, you need two things: the notification script and the configuration to trigger it.
 
-### Step A: Create the script
+### Step A. User Authentication (`upsd.users`)
+
+We define two separate users:
+
+1. **admin**: For administrative tasks and manual commands.
+2. **monuser**: A restricted user used only by the `upsmon` service to monitor the status.
+
+**File:** `/etc/nut/upsd.users`
+
+```ini
+[admin]
+    password = admin_password_here
+    actions = SET
+    instcmds = ALL
+    upsmon primary
+
+[monuser]
+    password = monitor_password_here
+    upsmon primary
+
+```
+
+### Step B: Create the script
 
 Create a file at `/etc/nut/upsalert.sh`:
 
@@ -126,7 +147,7 @@ chmod +x /etc/nut/upsalert.sh
 
 ```
 
-### Step B: Edit `/etc/nut/upsmon.conf`
+### Step C: Edit `/etc/nut/upsmon.conf`
 
 You must tell `upsmon` to use the script as a `NOTIFYCMD` and define which events should trigger it using `EXEC`.
 
@@ -137,7 +158,8 @@ Add or modify these lines in `/etc/nut/upsmon.conf`:
 NOTIFYCMD /etc/nut/upsalert.sh
 
 # Monitor line (ensure 'admin' and 'PASSWORD' match your upsd.users)
-MONITOR zircon@localhost 1 admin PASSWORD primary
+MONITOR zircon@localhost 1 monuser monitor_password_here primary
+
 
 # Define which events trigger the script (EXEC)
 NOTIFYFLAG ONLINE   SYSLOG+WALL+EXEC
